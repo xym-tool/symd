@@ -56,7 +56,10 @@ def get_local_yang_files(local_repos):
     """
     yfs = []
     for repo in local_repos:
-        yfs.extend(glob.glob('%s*.yang' % repo))
+        if repo.endswith('/'):
+            yfs.extend(glob.glob('%s*.yang' % repo))
+        else:
+            yfs.extend(glob.glob('%s/*.yang' % repo))
     return yfs
 
 
@@ -245,19 +248,22 @@ def get_connected_nodes():
     return ng
 
 
-def print_dependency_tree():
+def print_dependency_tree(single_node=None):
     """
     For each module, print the dependency tree for imported modules
     :return:
     """
     print('\n===Imported Modules===')
     for node in G.nodes_iter():
+        if single_node and (node!=single_node):
+            continue
         dg = nx.dfs_successors(G, node)
         plist = []
         print('\n%s:' % node)
         if len(dg):
             imports = dg[node]
             print_dependents(dg, plist, imports)
+            
 
 
 def get_dependent_modules():
@@ -304,21 +310,26 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Show the dependency graph for a set of yang models')
     parser.add_argument("--local-repos", default=["./"], nargs='+',
                         help="List of local directories where models are located")
-    parser.add_argument("--graph", default=False,
-                        help="Plot the overall dependency graph")
-    parser.add_argument("--sub-graphs", nargs='+', default=[],
-                        help="Plot the dependency graphs for the specified modules")
-    parser.add_argument("--impact-analysis", default=False,
-                        help="For each scanned yang module, print the impacting and impacted modules")
-    parser.add_argument("--dependency-tree", default=False,
-                        help="For each scanned yang module, print to stdout its dependency tree, (i.e. show all the "
-                        'modules that it depends on.')
+    g = parser.add_mutually_exclusive_group()
+    g.add_argument("--graph", action='store_true', default=False,
+                   help="Plot the overall dependency graph")
+    g.add_argument("--sub-graphs", nargs='+', default=[],
+                   help="Plot the dependency graphs for the specified modules")
+    g.add_argument("--impact-analysis", action='store_true', default=False,
+                   help="For each scanned yang module, print the impacting and impacted modules")
+    g.add_argument("--dependency-tree", action='store_true', default=False,
+                   help="For each scanned yang module, print to stdout its dependency tree, (i.e. show all the modules that it depends on)")
+    g.add_argument("--single-dependency-tree", type=str,
+                   help="For a single yang module, print to stdout its dependency tree, (i.e. show all the modules that it depends on)")
     args = parser.parse_args()
 
     init(args.local_repos)
 
     if args.dependency_tree:
         print_dependency_tree()
+
+    if args.single_dependency_tree:
+        print_dependency_tree(single_node=args.single_dependency_tree)
 
     if args.impact_analysis:
         print_impacting_modules()
@@ -327,9 +338,16 @@ if __name__ == "__main__":
     if args.graph:
         NG = get_connected_nodes()
 
-        plt.figure(1, figsize=(30, 30))
+        plt.figure(1, figsize=(50, 50))
         print('Drawing the overall dependency graph...')
-        nx.draw_networkx(NG, node_size=150,  node_shape='s', font_size=14, node_color='r', alpha=0.25, linewidths=0.5)
+        nx.draw_networkx(
+            NG,
+            node_size=200,
+            node_shape='s',
+            font_size=14,
+            node_color='r',
+            alpha=0.25,
+            linewidths=0.5)
         plt.savefig("modules.png")
 
     plot_num = 2
@@ -340,7 +358,14 @@ if __name__ == "__main__":
         print("Plotting graph for module '%s'..." % node)
         try:
             rtg = get_subgraph_for_node(node)
-            nx.draw_networkx(rtg, node_size=150, node_shape='s', font_size=14, node_color='r', alpha=0.25, linewidths=0.5)
+            nx.draw_networkx(
+                rtg,
+                node_size=150,
+                node_shape='s',
+                font_size=14,
+                node_color='r',
+                alpha=0.25,
+                linewidths=0.5)
             plt.savefig("%s.png" % node)
             print('    Done.')
         except nx.exception.NetworkXError as e:
