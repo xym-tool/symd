@@ -153,7 +153,7 @@ def get_module_dependencies():
                 error("Module '%s': imported module '%s' was not scanned" % (node, imp))
 
 
-def print_impacting_modules():
+def print_impacting_modules(single_node=None):
     """
     For each module, print a list of modules that the module is depending on,
     i.e. modules whose change can potentially impact the module. The function
@@ -163,13 +163,15 @@ def print_impacting_modules():
     """
     print('\n===Impacting Modules===')
     for node in G.nodes_iter():
+        if single_node and (node!=single_node):
+            continue
         descendants = nx.descendants(G, node)
         print('\n%s:' % node)
         for d in descendants:
             print('    %s' % d)
 
 
-def print_impacted_modules():
+def print_impacted_modules(single_node=None):
     """
      For each module, print a list of modules that depend on the module, i.e.
      modules that would be impacted by a change in this module. The function
@@ -179,6 +181,8 @@ def print_impacted_modules():
     """
     print('\n===Impacted Modules===')
     for node in G.nodes_iter():
+        if single_node and (node!=single_node):
+            continue
         ancestors = nx.ancestors(G, node)
         if len(ancestors) > 0:
             print('\n%s:' % node)
@@ -317,6 +321,8 @@ if __name__ == "__main__":
                    help="Plot the dependency graphs for the specified modules")
     g.add_argument("--impact-analysis", action='store_true', default=False,
                    help="For each scanned yang module, print the impacting and impacted modules")
+    g.add_argument("--single-impact-analysis", type=str,
+                   help="For a single yang module, print the impacting and impacted modules")
     g.add_argument("--dependency-tree", action='store_true', default=False,
                    help="For each scanned yang module, print to stdout its dependency tree, (i.e. show all the modules that it depends on)")
     g.add_argument("--single-dependency-tree", type=str,
@@ -334,6 +340,10 @@ if __name__ == "__main__":
     if args.impact_analysis:
         print_impacting_modules()
         print_impacted_modules()
+
+    if args.single_impact_analysis:
+        print_impacting_modules(single_node=args.single_impact_analysis)
+        print_impacted_modules(single_node=args.single_impact_analysis)
 
     if args.graph:
         NG = get_connected_nodes()
