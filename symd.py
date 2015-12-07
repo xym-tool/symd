@@ -12,6 +12,7 @@ import networkx as nx
 import argparse
 import glob
 import sys
+import os
 import re
 
 __author__ = "Jan Medved"
@@ -47,7 +48,7 @@ def error(s):
     print("ERROR: %s" % s, file=sys.stderr)
 
 
-def get_local_yang_files(local_repos):
+def get_local_yang_files(local_repos, recurse=False):
     """
     Gets the list of all yang module files in the specified local repositories
     :param local_repos: List of local repositories, i.e. directories where
@@ -55,11 +56,20 @@ def get_local_yang_files(local_repos):
     :return: list of all *.yang files in the local repositories
     """
     yfs = []
-    for repo in local_repos:
-        if repo.endswith('/'):
-            yfs.extend(glob.glob('%s*.yang' % repo))
-        else:
-            yfs.extend(glob.glob('%s/*.yang' % repo))
+
+    if not recurse:
+        for repo in local_repos:
+            if repo.endswith('/'):
+                yfs.extend(glob.glob('%s*.yang' % repo))
+            else:
+                yfs.extend(glob.glob('%s/*.yang' % repo))
+    else:
+        for repo in local_repos:
+            for path, sub, files in os.walk(repo):
+                for f in files:
+                    if f.endswith('.yang'):
+                        yfs.append(os.path.join(path, f))
+
     return yfs
 
 
@@ -278,8 +288,8 @@ def get_dependent_modules():
             print(dependents)
 
 
-def init(local_repos):
-    yang_files = get_local_yang_files(local_repos)
+def init(local_repos, recurse=False):
+    yang_files = get_local_yang_files(local_repos, recurse=recurse)
     print("\n*** Scanning %d yang files for 'import' and 'revision' statements..\n" % len(yang_files))
     get_yang_modules(yang_files)
     print('\n*** Found %d yang modules. Creating dependencies...\n' % len(G.nodes()))
@@ -314,6 +324,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Show the dependency graph for a set of yang models')
     parser.add_argument("--local-repos", default=["./"], nargs='+',
                         help="List of local directories where models are located")
+    parser.add_argument('-r', '--recurse', action='store_true', default=False,
+                        help='Recurse into directories specified to find yang models')
     g = parser.add_mutually_exclusive_group()
     g.add_argument("--graph", action='store_true', default=False,
                    help="Plot the overall dependency graph")
@@ -329,7 +341,7 @@ if __name__ == "__main__":
                    help="For a single yang module, print to stdout its dependency tree, (i.e. show all the modules that it depends on)")
     args = parser.parse_args()
 
-    init(args.local_repos)
+    init(args.local_repos, recurse=args.recurse)
 
     if args.dependency_tree:
         print_dependency_tree()
