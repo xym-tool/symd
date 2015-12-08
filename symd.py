@@ -65,7 +65,7 @@ def get_local_yang_files(local_repos, recurse=False):
                 yfs.extend(glob.glob('%s/*.yang' % repo))
     else:
         for repo in local_repos:
-            for path, sub, files in os.walk(repo):
+            for path, sub, files in os.walk(repo, followlinks=True):
                 for f in files:
                     if f.endswith('.yang'):
                         yfs.append(os.path.join(path, f))
