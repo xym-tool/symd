@@ -7,18 +7,19 @@
 # and is available at http://www.eclipse.org/legal/epl-v10.html
 ##############################################################################
 from __future__ import print_function  # Must be at the beginning of the file
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import networkx as nx
 import argparse
 import glob
 import sys
 import os
 import re
+import json
 
-__author__ = "Jan Medved"
+__author__ = "Jan Medved, Einar Nilsen-Nygaard"
 __copyright__ = "Copyright(c) 2015, Cisco Systems, Inc."
 __license__ = "Eclipse Public License v1.0"
-__email__ = "jmedved@cisco.com"
+__email__ = "jmedved@cisco.com, einarnn@cisco.com"
 
 G = nx.DiGraph()
 
@@ -68,7 +69,7 @@ def get_local_yang_files(local_repos, recurse=False):
     """
     yfs = []
     if not recurse:
-        for repo in local_repos:
+       for repo in local_repos:
             if repo.endswith('/'):
                 yfs.extend(glob.glob('%s*.yang' % repo))
             else:
@@ -319,6 +320,54 @@ def print_dependency_tree():
                 print_dependents(dg, plist, imports)
 
 
+def print_dependency_tree_as_json(graph=None, filename=None):
+    """
+    """
+    if filename==None:
+        print("No filename!")
+        sys.exit(1)
+    output = {}
+    output['nodes'] = []
+    output['links'] = []
+    idx_arr = []
+    ignore_exact = [ 'ietf-yang-types', 'ietf-inet-types', 'toaster', 'toaster-provider']
+    ignore_partials = [ 'openconfig', 'ex-' ]
+    if not graph:
+        graph = G
+    for node_name in graph.nodes_iter():
+        if node_name in ignore_exact:
+            continue
+        elif len(ignore_partials)>0:
+            partial_found = False
+            for partial in ignore_partials:
+                if partial in node_name:
+                    partial_found = True
+            if partial_found:
+                continue
+        output['nodes'].append({'name': node_name})
+        idx_arr.append(node_name)
+    for (z, a) in graph.edges_iter():
+        if a in ignore_exact or z in ignore_exact:
+            continue
+        if (ignore_partials)>0:
+            partial_found = False
+            for partial in ignore_partials:
+                if partial in a or partial in z:
+                    partial_found = True
+            if partial_found:
+                continue
+        a_idx = idx_arr.index(a)
+        z_idx = idx_arr.index(z)
+        output['links'].append(
+            {
+                'source': a_idx,
+                'target': z_idx,
+                'value': 1.0
+            })
+    with open(filename, 'w') as f:
+        f.write(json.dumps(output, indent=2, sort_keys=True))
+        f.close
+
 def prune_standalone_nodes():
     """
     Remove from the module dependency graph all modules that do not have any
@@ -421,8 +470,6 @@ def plot_module_dependency_graph(graph):
 
 
 if __name__ == "__main__":
-    # Set matplotlib into non-interactive mode
-    plt.interactive(False)
 
     parser = argparse.ArgumentParser(description='Show the dependency graph for a set of yang models.')
     parser.add_argument("--draft-repos", default=["./"], nargs='+',
@@ -431,6 +478,8 @@ if __name__ == "__main__":
                         help="List of local directories where models defined in IETF RFC are located.")
     parser.add_argument('-r', '--recurse', action='store_true', default=False,
                         help='Recurse into directories specified to find yang models')
+    parser.add_argument('--json', type=str,
+                        help="Output file for DS3 JSON options")
     g = parser.add_mutually_exclusive_group()
     g.add_argument("--graph", dest='graph', action='store_true', default=False,
                    help="Plot the overall dependency graph.")
@@ -444,7 +493,13 @@ if __name__ == "__main__":
                    help="For each scanned yang module, print to stdout its dependency tree, "
                    "(i.e. show all the modules that it depends on.")
     g.add_argument("--single-dependency-tree", type=str,
-                   help="For a single yang module, print to stdout its dependency tree, (i.e. show all the modules that it depends on)")
+                   help="For a single yang module, print to stdout its dependency tree, "
+                   "(i.e. show all the modules that it depends on)")
+    g.add_argument("--sankey-json", action='store_true',
+                   help="Dump dependency tree in JSON format for DS3 visualization to target file")
+    g.add_argument("--single-sankey-json", type=str,
+                   help="Dump dependency tree for a single node in JSON format for DS3 visualization")
+    
     args = parser.parse_args()
 
     init(args.rfc_repos, args.draft_repos, recurse=args.recurse)
@@ -452,38 +507,53 @@ if __name__ == "__main__":
     if args.dependency_tree:
         print_dependency_tree()
 
-    if args.single_dependency_tree:
+    elif args.single_dependency_tree:
         print_dependency_tree(single_node=args.single_dependency_tree)
 
-    if args.impact_analysis:
+    elif args.impact_analysis:
         print_impacting_modules()
         print_impacted_modules()
 
-    if args.single_impact_analysis:
+    elif args.single_impact_analysis:
         print_impacting_modules(single_node=args.single_impact_analysis)
         print_impacted_modules(single_node=args.single_impact_analysis)
 
-    if args.graph:
+    elif args.sankey_json:
+        if not args.json:
+            print >>sys.stderr, "Need output filename!"
+            sys.exit(1)
+        print_dependency_tree_as_json(filename=args.json)
+
+    elif args.single_sankey_json:
+        if not args.json:
+            print("Need output filename!")
+            sys.exit(1)
+        g = get_subgraph_for_node(args.single_sankey_json)
+        print_dependency_tree_as_json(graph=g, filename=args.json)
+
+    elif args.graph:
+        # Set matplotlib into non-interactive mode
+        plt.interactive(False)
         ng = prune_standalone_nodes()
         plt.figure(1, figsize=(20, 20))
         print('Plotting the overall dependency graph...')
         plot_module_dependency_graph(ng)
         plt.savefig("modules.png")
         print('    Done.')
+        plt.show()
 
-    plot_num = 2
-
-    for node in args.sub_graphs:
-        plt.figure(plot_num, figsize=(20, 20))
-        plot_num += 1
-        print("Plotting graph for module '%s'..." % node)
-        try:
-            plot_module_dependency_graph(get_subgraph_for_node(node))
-            plt.savefig("%s.png" % node)
-            print('    Done.')
-        except nx.exception.NetworkXError as e:
-            print("    %s" % e)
-
-    print('\n')
-
-    plt.show()
+    else:
+        plot_num = 2
+        for node in args.sub_graphs:
+            # Set matplotlib into non-interactive mode
+            plt.interactive(False)
+            plt.figure(plot_num, figsize=(20, 20))
+            plot_num += 1
+            print("Plotting graph for module '%s'..." % node)
+            try:
+                plot_module_dependency_graph(get_subgraph_for_node(node))
+                plt.savefig("%s.png" % node)
+                print('    Done.')
+            except nx.exception.NetworkXError as e:
+                print("    %s" % e)
+            plt.show()
