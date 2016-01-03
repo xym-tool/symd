@@ -1,0 +1,119 @@
+#!/usr/bin/env python
+##############################################################################
+# Copyright (c) 2015 Cisco Systems  All rights reserved.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License v1.0 which accompanies this distribution,
+# and is available at http://www.eclipse.org/legal/epl-v10.html
+##############################################################################
+from __future__ import print_function  # Must be at the beginning of the file
+
+import argparse
+
+from symd import init
+from symd import print_dependency_tree 
+from symd import print_dependency_tree_as_json
+from symd import print_impacting_modules
+from symd import print_impacted_modules
+from symd import get_subgraph_for_node
+from symd import plot_module_dependency_graph
+
+parser = argparse.ArgumentParser(description='Show the dependency graph for a set of yang models.')
+parser.add_argument("--draft-repos", default=["./"], nargs='+',
+                    help="List of local directories where models defined in IETF drafts are located.")
+parser.add_argument("--rfc-repos", default=["./"], nargs='+',
+                    help="List of local directories where models defined in IETF RFC are located.")
+parser.add_argument('-r', '--recurse', action='store_true', default=False,
+                    help='Recurse into directories specified to find yang models')
+parser.add_argument('--json-output', type=str,
+                    help="Output file for D3.js JSON options")
+parser.add_argument('--ignore-exact', nargs='+', default=[],
+                    help="Exact match YANG module names to ignore")
+parser.add_argument('--ignore-partial', nargs='+', default=[],
+                    help="Partial match YANG module names to ignore")
+parser.add_argument('--verbose', '-v', action='store_true', default=False,
+                    help="produce verbose output from analysis")
+
+g = parser.add_mutually_exclusive_group()
+g.add_argument("--graph", dest='graph', action='store_true', default=False,
+               help="Plot the overall dependency graph.")
+g.add_argument("--sub-graphs", nargs='+', default=[],
+               help="Plot the dependency graphs for the specified modules.")
+g.add_argument("--impact-analysis", dest='impact_analysis', action='store_true', default=False,
+               help="For each scanned yang module, print the impacting and impacted modules.")
+g.add_argument("--single-impact-analysis", type=str,
+               help="For a single yang module, print the impacting and impacted modules")
+g.add_argument("--dependency-tree", dest='dependency_tree', action='store_true', default=False,
+               help="For each scanned yang module, print to stdout its dependency tree, "
+               "(i.e. show all the modules that it depends on.")
+g.add_argument("--single-dependency-tree", type=str,
+               help="For a single yang module, print to stdout its dependency tree, "
+               "(i.e. show all the modules that it depends on)")
+g.add_argument("--d3-json", action='store_true',
+               help="Dump dependency tree in JSON format for D3.js visualization to target file")
+g.add_argument("--single-d3-json", type=str,
+               help="Dump dependency tree for a single node in JSON format for D3.js visualization")
+
+args = parser.parse_args()
+
+init(args.rfc_repos, args.draft_repos, recurse=args.recurse, verbose=args.verbose)
+
+if args.dependency_tree:
+    print_dependency_tree()
+    
+elif args.single_dependency_tree:
+    print_dependency_tree(single_node=args.single_dependency_tree)
+    
+elif args.impact_analysis:
+    print_impacting_modules()
+    print_impacted_modules()
+    
+elif args.single_impact_analysis:
+    print_impacting_modules(single_node=args.single_impact_analysis)
+    print_impacted_modules(single_node=args.single_impact_analysis)
+    
+elif args.d3_json:
+    if not args.json_output:
+        print("Need output filename!")
+    sys.exit(1)
+    print_dependency_tree_as_json(filename=args.json_output,
+                                  ignore_exact=args.ignore_exact,
+                                  ignore_partial=args.ignore_partial)
+        
+elif args.single_d3_json:
+    if not args.json_output:
+        print("Need output filename!")
+        sys.exit(1)
+    g = get_subgraph_for_node(args.single_d3_json)
+    print_dependency_tree_as_json(graph=g,
+                                  filename=args.json_output,
+                                  ignore_exact=args.ignore_exact,
+                                  ignore_partial=args.ignore_partial)
+
+        
+elif args.graph:
+    # Set matplotlib into non-interactive mode
+    plt.interactive(False)
+    ng = prune_standalone_nodes()
+    plt.figure(1, figsize=(20, 20))
+    print('Plotting the overall dependency graph...')
+    plot_module_dependency_graph(ng)
+    plt.savefig("modules.png")
+    print('    Done.')
+    plt.show()
+
+else:
+    plot_num = 2
+    for node in args.sub_graphs:
+        # Set matplotlib into non-interactive mode
+        plt.interactive(False)
+        plt.figure(plot_num, figsize=(20, 20))
+        plot_num += 1
+        print("Plotting graph for module '%s'..." % node)
+        try:
+            plot_module_dependency_graph(get_subgraph_for_node(node))
+            plt.savefig("%s.png" % node)
+            print('    Done.')
+        except nx.exception.NetworkXError as e:
+            print("    %s" % e)
+        plt.show()
