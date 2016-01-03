@@ -1,4 +1,7 @@
 v/
+dist/
+build/
+symd.egg-info/
 *.pyc
 *~
 

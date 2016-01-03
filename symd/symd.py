@@ -331,12 +331,7 @@ def print_dependency_tree():
                 print_dependents(dg, plist, imports)
 
 
-def print_dependency_tree_as_json(graph=None, filename=None, ignore_exact=[], ignore_partial=[]):
-    """
-    """
-    if filename==None:
-        print("No filename!")
-        sys.exit(1)
+def return_dependency_tree_as_json(graph=None, ignore_exact=[], ignore_partial=[]):
     output = {}
     output['nodes'] = []
     output['links'] = []
@@ -348,8 +343,8 @@ def print_dependency_tree_as_json(graph=None, filename=None, ignore_exact=[], ig
             continue
         elif len(ignore_partial)>0:
             partial_found = False
-            for partial in ignore_partials:
-                if partial in node_name:
+            for partial in ignore_partial:
+                if node_name and (partial in node_name):
                     partial_found = True
             if partial_found:
                 continue
@@ -373,9 +368,23 @@ def print_dependency_tree_as_json(graph=None, filename=None, ignore_exact=[], ig
                 'target': z_idx,
                 'value': 1.0
             })
+    return output
+
+        
+def print_dependency_tree_as_json(graph=None, filename=None, ignore_exact=[], ignore_partial=[]):
+    """
+    """
+    if filename==None:
+        print("No filename!")
+        sys.exit(1)
+    output = return_dependency_tree_as_json(
+        graph=graph,
+        ignore_exact=ignore_exact,
+        ignore_partial=ignore_partial)
     with open(filename, 'w') as f:
         f.write(json.dumps(output, indent=2, sort_keys=True))
         f.close
+
 
 def prune_standalone_nodes():
     """
