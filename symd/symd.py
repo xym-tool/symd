@@ -339,11 +339,13 @@ def return_dependency_tree_as_json(graph=None, ignore_exact=[], ignore_partial=[
     if not graph:
         graph = G
     for node_name in graph.nodes_iter():
-        if node_name in ignore_exact:
+        if ignore_exact and (node_name in ignore_exact):
             continue
-        elif len(ignore_partial)>0:
+        if ignore_partial and len(ignore_partial)>0:
             partial_found = False
             for partial in ignore_partial:
+                if len(partial)==0:
+                    continue
                 if node_name and (partial in node_name):
                     partial_found = True
             if partial_found:
@@ -356,6 +358,8 @@ def return_dependency_tree_as_json(graph=None, ignore_exact=[], ignore_partial=[
         if len(ignore_partial)>0:
             partial_found = False
             for partial in ignore_partial:
+                if len(partial)==0:
+                    continue
                 if partial in a or partial in z:
                     partial_found = True
             if partial_found:
