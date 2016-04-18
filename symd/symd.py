@@ -331,7 +331,7 @@ def print_dependency_tree():
                 print_dependents(dg, plist, imports)
 
 
-def return_dependency_tree_as_json(graph=None, ignore_exact=[], ignore_partial=[]):
+def return_dependency_tree_as_json(graph=None, ignore_exact=[], ignore_partial=[], yang_dict={}):
     output = {}
     output['nodes'] = []
     output['links'] = []
@@ -350,7 +350,12 @@ def return_dependency_tree_as_json(graph=None, ignore_exact=[], ignore_partial=[
                     partial_found = True
             if partial_found:
                 continue
-        output['nodes'].append({'name': node_name})
+	draft_email = yang_dict.get(node_name, None);
+	if draft_email != None:
+            output['nodes'].append({'name': node_name, 'email' : draft_email})
+	else:
+            output['nodes'].append({'name': node_name })
+
         idx_arr.append(node_name)
     for (z, a) in graph.edges_iter():
         if a in ignore_exact or z in ignore_exact:
@@ -375,7 +380,7 @@ def return_dependency_tree_as_json(graph=None, ignore_exact=[], ignore_partial=[
     return output
 
         
-def print_dependency_tree_as_json(graph=None, filename=None, ignore_exact=[], ignore_partial=[]):
+def print_dependency_tree_as_json(graph=None, filename=None, ignore_exact=[], ignore_partial=[], yang_dict={}):
     """
     """
     if filename==None:
@@ -384,11 +389,25 @@ def print_dependency_tree_as_json(graph=None, filename=None, ignore_exact=[], ig
     output = return_dependency_tree_as_json(
         graph=graph,
         ignore_exact=ignore_exact,
-        ignore_partial=ignore_partial)
+        ignore_partial=ignore_partial, yang_dict=yang_dict)
     with open(filename, 'w') as f:
         f.write(json.dumps(output, indent=2, sort_keys=True))
         f.close
 
+def print_dependency_emails(graph=None, ignore_exact=[], ignore_partial=[], yang_dict={}):
+    """
+    """
+    output = return_dependency_tree_as_json(
+        graph=graph,
+        ignore_exact=ignore_exact,
+        ignore_partial=ignore_partial, yang_dict=yang_dict)
+    emails = set();
+    for node in output["nodes"]:
+        email = node.get("email", None)
+        if email != None:
+            emails.add(email)
+    for mail in emails:
+        print(" %s " % mail)
 
 def prune_standalone_nodes():
     """

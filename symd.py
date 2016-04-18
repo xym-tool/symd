@@ -320,7 +320,7 @@ def print_dependency_tree():
                 print_dependents(dg, plist, imports)
 
 
-def print_dependency_tree_as_json(graph=None, filename=None):
+def print_dependency_tree_as_json(graph=None, filename=None, yang_dict={}):
     """
     """
     if filename==None:
@@ -344,7 +344,11 @@ def print_dependency_tree_as_json(graph=None, filename=None):
                     partial_found = True
             if partial_found:
                 continue
-        output['nodes'].append({'name': node_name})
+		node_email = yang_dict.get(node_name, None)
+		if node_email != None:
+                    output['nodes'].append({'name': node_name, 'email' : node_email})
+		else:
+                    output['nodes'].append({'name': node_name})
         idx_arr.append(node_name)
     for (z, a) in graph.edges_iter():
         if a in ignore_exact or z in ignore_exact:
@@ -499,6 +503,8 @@ if __name__ == "__main__":
                    help="Dump dependency tree in JSON format for DS3 visualization to target file")
     g.add_argument("--single-sankey-json", type=str,
                    help="Dump dependency tree for a single node in JSON format for DS3 visualization")
+    g.add_argument("--dict-file", type=str,
+                   help="Dictionary file containing yang model vs draft/rfc email mapping")
     
     args = parser.parse_args()
 
@@ -522,14 +528,24 @@ if __name__ == "__main__":
         if not args.json:
             print >>sys.stderr, "Need output filename!"
             sys.exit(1)
-        print_dependency_tree_as_json(filename=args.json)
+		yang_dict = {}
+		with open(dict_file,"r") as df:
+                    for line in df:
+                        yang_model, yang_auth_email = line.partition(":")[::2]
+                        yang_dict[yang_model.strip()] = yang_auth_email
+        print_dependency_tree_as_json(filename=args.json, yang_dict = yang_dict)
 
     elif args.single_sankey_json:
         if not args.json:
             print("Need output filename!")
             sys.exit(1)
         g = get_subgraph_for_node(args.single_sankey_json)
-        print_dependency_tree_as_json(graph=g, filename=args.json)
+		yang_dict = {}
+		with open(dict_file,"r") as df:
+			for line in df:
+				yang_model, yang_auth_email = line.partition(":")[::2]
+				yang_dict[yang_model.strip()] = yang_auth_email
+        print_dependency_tree_as_json(graph=g, filename=args.json, yang_dict=yang_dict)
 
     elif args.graph:
         # Set matplotlib into non-interactive mode

@@ -9,10 +9,12 @@
 from __future__ import print_function  # Must be at the beginning of the file
 
 import argparse
+import sys
 
 from symd import init
 from symd import print_dependency_tree 
 from symd import print_dependency_tree_as_json
+from symd import print_dependency_emails
 from symd import print_impacting_modules
 from symd import print_impacted_modules
 from symd import get_subgraph_for_node
@@ -27,6 +29,7 @@ parser.add_argument('-r', '--recurse', action='store_true', default=False,
                     help='Recurse into directories specified to find yang models')
 parser.add_argument('--json-output', type=str,
                     help="Output file for D3.js JSON options")
+parser.add_argument('--dict-file', type=str, help="Dictionary file containing yang model vs draft/rfc email mapping")
 parser.add_argument('--ignore-exact', nargs='+', default=[],
                     help="Exact match YANG module names to ignore")
 parser.add_argument('--ignore-partial', nargs='+', default=[],
@@ -53,6 +56,8 @@ g.add_argument("--d3-json", action='store_true',
                help="Dump dependency tree in JSON format for D3.js visualization to target file")
 g.add_argument("--single-d3-json", type=str,
                help="Dump dependency tree for a single node in JSON format for D3.js visualization")
+g.add_argument("--generate-dependent-emails", type=str,
+               help="Dump dependent email addresses for a single node")
 
 args = parser.parse_args()
 
@@ -75,21 +80,49 @@ elif args.single_impact_analysis:
 elif args.d3_json:
     if not args.json_output:
         print("Need output filename!")
-    sys.exit(1)
+        sys.exit(1)
+    yang_dict = {}
+    with open(dict_file,"r") as df:
+        for line in df:
+            line.rstrip('\n')
+            yang_model, yang_auth_email = line.partition(":")[::2]
+            yang_dict[yang_model.strip()] = yang_auth_email.strip()
     print_dependency_tree_as_json(filename=args.json_output,
                                   ignore_exact=args.ignore_exact,
-                                  ignore_partial=args.ignore_partial)
+                                  ignore_partial=args.ignore_partial,
+                                  yang_dict=yang_dict)
         
 elif args.single_d3_json:
     if not args.json_output:
         print("Need output filename!")
         sys.exit(1)
     g = get_subgraph_for_node(args.single_d3_json)
+    yang_dict = {}
+    with open(args.dict_file,"r") as df:
+        for line in df:
+            line.rstrip('\n')
+            yang_model, yang_auth_email = line.partition(":")[::2]
+            yang_dict[yang_model.strip()] = yang_auth_email.strip()
     print_dependency_tree_as_json(graph=g,
                                   filename=args.json_output,
                                   ignore_exact=args.ignore_exact,
-                                  ignore_partial=args.ignore_partial)
+                                  ignore_partial=args.ignore_partial,
+                                  yang_dict=yang_dict)
 
+elif args.generate_dependent_emails:
+    if not args.dict_file:
+        print("Need Yang Dict file")
+        sys.exit(1)
+    g = get_subgraph_for_node(args.generate_dependent_emails)
+    yang_dict = {}
+    with open(args.dict_file,"r") as df:
+        for line in df:
+            line.rstrip('\n')
+            yang_model, yang_auth_email = line.partition(":")[::2]
+            yang_dict[yang_model.strip()] = yang_auth_email.strip()
+    print_dependency_emails(graph=g, ignore_exact=args.ignore_exact,
+                            ignore_partial=args.ignore_partial,
+                            yang_dict=yang_dict)
         
 elif args.graph:
     # Set matplotlib into non-interactive mode
