@@ -213,23 +213,32 @@ def get_unknown_modules(verbose=False):
         G.add_node(un, attr_dict=attr)
 
 
-def print_impacting_modules(single_node=None):
+def print_impacting_modules(single_node=None, json_out=None):
     """
     For each module, print a list of modules that the module is depending on,
     i.e. modules whose change can potentially impact the module. The function
     shows all levels of dependency, not just the immediately imported
-    modules.
+    modules.  If the json_out argument is not None, then the output will be
+    recorded there instead of on stdout.
     :return:
     """
-    print('\n===Impacting Modules===')
+    if json_out is None:
+        print('\n===Impacting Modules===')
+    else:
+        json_out['impacting_modules'] = {}
     for node_name in G.nodes_iter():
         if single_node and (node_name!=single_node):
             continue
         descendants = nx.descendants(G, node_name)
-        print(augment_format_string(node_name, '\n%s:') % node_name)
+        if json_out is None:
+            print(augment_format_string(node_name, '\n%s:') % node_name)
+        else:
+            json_out['impacting_modules'][node_name] = []
         for d in descendants:
-            print(augment_format_string(d, '    %s') % d)
-
+            if json_out is None:
+                print(augment_format_string(d, '    %s') % d)
+            else:
+                json_out['impacting_modules'][node_name].append(d)
 
 def augment_format_string(node_name, fmts):
     """
@@ -248,23 +257,33 @@ def augment_format_string(node_name, fmts):
     return fmts
 
 
-def print_impacted_modules(single_node=None):
+def print_impacted_modules(single_node=None, json_out=None):
     """
      For each module, print a list of modules that depend on the module, i.e.
      modules that would be impacted by a change in this module. The function
      shows all levels of dependency, not just the immediately impacted
-     modules.
+     modules.  If the json_out argument is not None, then the output will be
+     recorded there rather than printed on stdout.
     :return:
     """
-    print('\n===Impacted Modules===')
+    if json_out is None:
+        print('\n===Impacted Modules===')
+    else:
+        json_out['impacted_modules'] = {}
     for node_name in G.nodes_iter():
         if single_node and (node_name!=single_node):
             continue
         ancestors = nx.ancestors(G, node_name)
         if len(ancestors) > 0:
-            print(augment_format_string(node_name, '\n%s:') % node_name)
+            if json_out is None:
+                print(augment_format_string(node_name, '\n%s:') % node_name)
+            else:
+                json_out['impacted_modules'][node_name] = []
             for a in ancestors:
-                print(augment_format_string(a, '    %s') % a)
+                if json_out is None:
+                    print(augment_format_string(a, '    %s') % a)
+                else:
+                    json_out['impacted_modules'][node_name].append(a)
 
 
 def get_subgraph_for_node(node_name):

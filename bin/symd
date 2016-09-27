@@ -9,6 +9,7 @@
 from __future__ import print_function  # Must be at the beginning of the file
 
 import argparse
+import json
 import sys
 
 from symd import init
@@ -44,8 +45,11 @@ g.add_argument("--sub-graphs", nargs='+', default=[],
                help="Plot the dependency graphs for the specified modules.")
 g.add_argument("--impact-analysis", dest='impact_analysis', action='store_true', default=False,
                help="For each scanned yang module, print the impacting and impacted modules.")
+g.add_argument("--impact-analysis-json", dest='impact_analysis_json', action='store_true', default=False, help="For each scanned yang module, print the impacting and impacted modules in JSON format.")
 g.add_argument("--single-impact-analysis", type=str,
                help="For a single yang module, print the impacting and impacted modules")
+g.add_argument("--single-impact-analysis-json", type=str,
+               help="For a single yang module, print the impacting and impacted modules in JSON format")
 g.add_argument("--dependency-tree", dest='dependency_tree', action='store_true', default=False,
                help="For each scanned yang module, print to stdout its dependency tree, "
                "(i.e. show all the modules that it depends on.")
@@ -70,13 +74,33 @@ elif args.single_dependency_tree:
     print_dependency_tree(single_node=args.single_dependency_tree)
     
 elif args.impact_analysis:
-    print_impacting_modules()
-    print_impacted_modules()
+        print_impacting_modules()
+        print_impacted_modules()
     
+elif args.impact_analysis_json:
+    if not args.json_output:
+        print("Need output filename!")
+        sys.exit(1)
+    jout = {}
+    print_impacting_modules(json_out=jout)
+    print_impacted_modules(json_out=jout)
+    with open(args.json_output, 'w') as fd:
+        fd.write(json.dumps(jout, indent=4) + "\n")
+
 elif args.single_impact_analysis:
     print_impacting_modules(single_node=args.single_impact_analysis)
     print_impacted_modules(single_node=args.single_impact_analysis)
     
+elif args.single_impact_analysis_json:
+    if not args.json_output:
+        print("Need output filename!")
+        sys.exit(1)
+    jout = {}
+    print_impacting_modules(single_node=args.single_impact_analysis_json, json_out=jout)
+    print_impacted_modules(single_node=args.single_impact_analysis_json, json_out=jout)
+    with open(args.json_output, 'w') as fd:
+        fd.write(json.dumps(jout, indent=4) + "\n")
+
 elif args.d3_json:
     if not args.json_output:
         print("Need output filename!")
