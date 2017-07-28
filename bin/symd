@@ -106,7 +106,7 @@ elif args.d3_json:
         print("Need output filename!")
         sys.exit(1)
     yang_dict = {}
-    with open(dict_file,"r") as df:
+    with open(args.dict_file,"r") as df:
         for line in df:
             line.rstrip('\n')
             yang_model, yang_auth_email = line.partition(":")[::2]
