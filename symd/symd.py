@@ -369,10 +369,10 @@ def return_dependency_tree_as_json(graph=None, ignore_exact=[], ignore_partial=[
                     partial_found = True
             if partial_found:
                 continue
-	draft_email = yang_dict.get(node_name, None);
-	if draft_email != None:
+        draft_email = yang_dict.get(node_name, None)
+        if draft_email != None:
             output['nodes'].append({'name': node_name, 'email' : draft_email})
-	else:
+        else:
             output['nodes'].append({'name': node_name })
 
         idx_arr.append(node_name)
@@ -420,7 +420,7 @@ def print_dependency_emails(graph=None, ignore_exact=[], ignore_partial=[], yang
         graph=graph,
         ignore_exact=ignore_exact,
         ignore_partial=ignore_partial, yang_dict=yang_dict)
-    emails = set();
+    emails = set()
     for node in output["nodes"]:
         email = node.get("email", None)
         if email != None:

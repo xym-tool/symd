@@ -69,7 +69,7 @@ def get_local_yang_files(local_repos, recurse=False):
     """
     yfs = []
     if not recurse:
-       for repo in local_repos:
+        for repo in local_repos:
             if repo.endswith('/'):
                 yfs.extend(glob.glob('%s*.yang' % repo))
             else:
@@ -344,11 +344,11 @@ def print_dependency_tree_as_json(graph=None, filename=None, yang_dict={}):
                     partial_found = True
             if partial_found:
                 continue
-		node_email = yang_dict.get(node_name, None)
-		if node_email != None:
-                    output['nodes'].append({'name': node_name, 'email' : node_email})
-		else:
-                    output['nodes'].append({'name': node_name})
+        node_email = yang_dict.get(node_name, None)
+        if node_email != None:
+            output['nodes'].append({'name': node_name, 'email' : node_email})
+        else:
+            output['nodes'].append({'name': node_name})
         idx_arr.append(node_name)
     for (z, a) in graph.edges_iter():
         if a in ignore_exact or z in ignore_exact:
@@ -528,11 +528,11 @@ if __name__ == "__main__":
         if not args.json:
             print >>sys.stderr, "Need output filename!"
             sys.exit(1)
-		yang_dict = {}
-		with open(dict_file,"r") as df:
-                    for line in df:
-                        yang_model, yang_auth_email = line.partition(":")[::2]
-                        yang_dict[yang_model.strip()] = yang_auth_email
+        yang_dict = {}
+        with open(args.dict_file,"r") as df:
+            for line in df:
+                yang_model, yang_auth_email = line.partition(":")[::2]
+                yang_dict[yang_model.strip()] = yang_auth_email
         print_dependency_tree_as_json(filename=args.json, yang_dict = yang_dict)
 
     elif args.single_sankey_json:
@@ -540,11 +540,11 @@ if __name__ == "__main__":
             print("Need output filename!")
             sys.exit(1)
         g = get_subgraph_for_node(args.single_sankey_json)
-		yang_dict = {}
-		with open(dict_file,"r") as df:
-			for line in df:
-				yang_model, yang_auth_email = line.partition(":")[::2]
-				yang_dict[yang_model.strip()] = yang_auth_email
+        yang_dict = {}
+        with open(args.dict_file,"r") as df:
+            for line in df:
+                yang_model, yang_auth_email = line.partition(":")[::2]
+                yang_dict[yang_model.strip()] = yang_auth_email
         print_dependency_tree_as_json(graph=g, filename=args.json, yang_dict=yang_dict)
 
     elif args.graph:
