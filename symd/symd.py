@@ -334,13 +334,15 @@ def print_dependents(graph, preamble_list, imports):
             pass
 
 
-def print_dependency_tree():
+def print_dependency_tree(single_node=None):
     """
     For each module, print the dependency tree for imported modules
     :return: None
     """
     print('\n=== Module Dependency Trees ===')
     for node_name in G.nodes_iter():
+        if single_node and (node_name != single_node):
+            continue
         if G.node[node_name][TAG_ATTR] != UNKNOWN_TAG:
             dg = nx.dfs_successors(G, node_name)
             plist = []
