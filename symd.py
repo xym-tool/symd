@@ -330,7 +330,10 @@ def print_dependency_tree_as_json(graph=None, filename=None, yang_dict={}):
     output['nodes'] = []
     output['links'] = []
     idx_arr = []
-    ignore_exact = [ 'ietf-yang-types', 'ietf-inet-types', 'toaster', 'toaster-provider']
+    """
+    Fix the bug to avoid the "None" object.  We modify the ignore_exact with "None".
+    """
+    ignore_exact = [ 'ietf-yang-types', 'ietf-inet-types', 'toaster', 'toaster-provider', None]
     ignore_partials = [ 'openconfig', 'ex-' ]
     if not graph:
         graph = G
@@ -353,7 +356,10 @@ def print_dependency_tree_as_json(graph=None, filename=None, yang_dict={}):
     for (z, a) in graph.edges_iter():
         if a in ignore_exact or z in ignore_exact:
             continue
-        if (ignore_partials)>0:
+        """
+        Fix the bug. We get the length of "ignore_partials" list to compare with an integer value
+        """
+        if len(ignore_partials)>0:
             partial_found = False
             for partial in ignore_partials:
                 if partial in a or partial in z:
