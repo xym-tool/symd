@@ -16,6 +16,12 @@ import os
 import re
 import json
 
+"""
+Code fix to avoid errors while creating the plot. (with option --graph)
+"""
+from pylab import *
+from cairocffi import *
+
 __author__ = "Jan Medved, Einar Nilsen-Nygaard"
 __copyright__ = "Copyright(c) 2015, Cisco Systems, Inc."
 __license__ = "Eclipse Public License v1.0"
