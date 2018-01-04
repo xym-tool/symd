@@ -7,3 +7,11 @@ Some C-library dependencies must be installed to enable matplotlib, which is int
 * freetype
 
 These may be installed via your packaging mechanism of choice, e.g. macports or brew on MacOS, yum or apt on linux.
+
+Possible dependencies:
+  networkx 1.6
+  pylab
+  cairocffi
+  python3-cffi
+  
+ 
