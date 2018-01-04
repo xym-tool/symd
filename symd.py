@@ -7,7 +7,7 @@
 # and is available at http://www.eclipse.org/legal/epl-v10.html
 ##############################################################################
 from __future__ import print_function  # Must be at the beginning of the file
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import networkx as nx
 import argparse
 import glob
@@ -15,12 +15,6 @@ import sys
 import os
 import re
 import json
-
-"""
-Code fix to avoid errors while creating the plot. (with option --graph)
-"""
-from pylab import *
-from cairocffi import *
 
 __author__ = "Jan Medved, Einar Nilsen-Nygaard"
 __copyright__ = "Copyright(c) 2015, Cisco Systems, Inc."
@@ -337,7 +331,26 @@ def print_dependency_tree_as_json(graph=None, filename=None, yang_dict={}):
     output['links'] = []
     idx_arr = []
     """
-    Fix the bug to avoid the "None" object.  We modify the ignore_exact with "None".
+    The next error appears, when the particular model is scanned by the symd.py:
+    
+    File "./symd.py", line 532, in <module>
+        print_dependency_tree_as_json(filename=args.json)
+    File "./symd.py", line 350, in print_dependency_tree_as_json
+        if partial in node_name:
+    TypeError: argument of type 'NoneType' is not iterable.
+    
+    Basically, 
+    
+    in the "print_dependency_tree_as_json(graph=None, filename=None)" function,
+        first we iterate nodes in the graph with the line "for node_name in graph.nodes_iter():"
+        if "node_name" appears in the list "ignore_exact", we skip next steps
+        after we iterate partials with "for partials in ignore_partials"
+        and finally we perform the check "if partial in node_name";
+        
+    Because of the node "node_name" that has type <class 'NoneType'>, we obtain the error.
+    The error is presented in the beginning of the comment.
+    
+    With this hot temporary fix we enable the script to handle (will not crash) the appearence of such a node.
     """
     ignore_exact = [ 'ietf-yang-types', 'ietf-inet-types', 'toaster', 'toaster-provider', None]
     ignore_partials = [ 'openconfig', 'ex-' ]
@@ -362,9 +375,6 @@ def print_dependency_tree_as_json(graph=None, filename=None, yang_dict={}):
     for (z, a) in graph.edges_iter():
         if a in ignore_exact or z in ignore_exact:
             continue
-        """
-        Fix the bug. We get the length of "ignore_partials" list to compare with an integer value
-        """
         if len(ignore_partials)>0:
             partial_found = False
             for partial in ignore_partials:
